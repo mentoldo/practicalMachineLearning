@@ -1,0 +1,71 @@
+# Classe prediction model with Random Forest
+
+## Summary
+A Random Forest model was perform to predict the perfom in barbell lifts, correctly and incorrectly in 5 different ways. The accuracy of the model was 0.9984.
+
+## Libraries and data
+```{r init}
+library(randomForest)
+library(ggplot2)
+library(caret)
+
+# Download files
+trainingURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+if(!dir.exists("data")) dir.create("./data")
+
+download.file(trainingURL, "./data/pml-training.csv")
+download.file(testURL, "./data/pml-testing.csv")
+
+## Read files
+pml <- read.csv("./data/pml-training.csv")
+validating <- read.csv("./data/pml-testing.csv")
+
+# Create a building data set and validation set
+set.seed(55493)
+inTrain <- createDataPartition(y=pml$classe,
+                               p=3/4, list=FALSE)
+training <- pml[inTrain,]; testing <- pml[-inTrain,]
+
+```
+
+## Preprocess
+The variables skewness, kurtosis, stddev, var, avg, max and min were discarded. A total of 57 variables ware preserved for the predictive model. 
+```{r preprocess}
+## PreProcess
+## Selecting index variables
+index <- grepl("skewness", names(training)) |
+    grepl("kurtosis", names(training))  |
+    grepl("stddev", names(training))  |
+    grepl("var", names(training))  |
+    grepl("avg", names(training))  |
+    grepl("max", names(training))  |
+    grepl("min", names(training)) |
+    grepl("amplitude", names(training))
+
+newTraining <- training[,!index]
+newTraining <- newTraining[,-c(1,3,4)]
+
+newTesting <- testing[,!index]
+newTesting <- newTesting[, -c(1,3,4)]
+
+## Converting to numerics
+for (i in 2:56) {
+    newTraining[,i] <- as.numeric(newTraining[,i])
+}
+
+for (i in 2:56) {
+    newTesting[,i] <- as.numeric(newTesting[,i])
+}
+```
+
+## fit Model
+```{r randomForest}
+fitMod <- randomForest(classe ~ ., method = "rf", data = newTraining, ntree = 300)
+```
+
+## Confusion Matrix
+```{r confusionMatrix}
+confusionMatrix(predict(fitMod, newTesting), newTesting$classe)
+```
